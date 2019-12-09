@@ -70,6 +70,36 @@ public class CalendarView extends ViewGroup {
         requestLayout();
     }
 
+
+
+
+
+    public List<CalendarBean> getData(){
+        return data;
+    }
+
+    public void resetSelection(){
+
+        for(int i=0;i<getChildCount();i++){
+            getChildAt(i).setSelected(false);
+        }
+        requestLayout();
+    }
+
+
+    public void selectChild(){
+
+        for(int i=0;i<getChildCount();i++){
+            if(selectPostion==i) {
+                getChildAt(i).setSelected(true);
+                requestLayout();
+            }
+        }
+
+
+    }
+
+
     private void setItem() {
 
         selectPostion = -1;
@@ -85,15 +115,10 @@ public class CalendarView extends ViewGroup {
             if (view == null || view != chidView) {
                 addViewInLayout(chidView, i, chidView.getLayoutParams(), true);
             }
-
             if(isToday&&selectPostion==-1){
                 int[]date=CalendarUtil.getYMD(new Date());
                 if(bean.year==date[0]&&bean.moth==date[1]&&bean.day==date[2]){
                      selectPostion=i;
-                }
-            }else {
-                if (selectPostion == -1 && bean.day == 1) {
-                    selectPostion = i;
                 }
             }
 
@@ -112,16 +137,17 @@ public class CalendarView extends ViewGroup {
         view.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                if (selectPostion != -1) {
-                    getChildAt(selectPostion).setSelected(false);
-                    getChildAt(potsion).setSelected(true);
-                }
-                selectPostion = potsion;
-
                 if (onItemClickListener != null) {
                     onItemClickListener.onItemClick(view, potsion, bean);
                 }
+                if (selectPostion != -1) {
+                    getChildAt(selectPostion).setSelected(false);
+
+                }
+                getChildAt(potsion).setSelected(true);
+                selectPostion = potsion;
+
+
             }
         });
     }
@@ -129,7 +155,12 @@ public class CalendarView extends ViewGroup {
     public int[] getSelectPostion() {
         Rect rect = new Rect();
         try {
-            getChildAt(selectPostion).getHitRect(rect);
+            if(selectPostion==-1){
+                getChildAt(0).getHitRect(rect);
+            }else {
+                getChildAt(selectPostion).getHitRect(rect);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -141,15 +172,13 @@ public class CalendarView extends ViewGroup {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
         int parentWidth = MeasureSpec.getSize(MeasureSpec.makeMeasureSpec(widthMeasureSpec, MeasureSpec.EXACTLY));
-
         itemWidth = parentWidth / column;
         itemHeight = itemWidth;
-
         View view = getChildAt(0);
         if (view == null) {
             return;
         }
-        ViewGroup.LayoutParams params = view.getLayoutParams();
+        LayoutParams params = view.getLayoutParams();
         if (params != null && params.height > 0) {
             itemHeight = params.height;
         }

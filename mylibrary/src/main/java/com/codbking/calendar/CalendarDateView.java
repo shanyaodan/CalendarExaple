@@ -10,7 +10,9 @@ import android.view.ViewGroup;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 import static com.codbking.calendar.CalendarFactory.getMonthOfDayList;
 
@@ -48,6 +50,7 @@ public class CalendarDateView extends ViewPager implements CalendarTopView {
 
     public CalendarDateView(Context context, AttributeSet attrs) {
         super(context, attrs);
+
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CalendarDateView);
         row = a.getInteger(R.styleable.CalendarDateView_cbd_calendar_row, 6);
         a.recycle();
@@ -69,6 +72,17 @@ public class CalendarDateView extends ViewPager implements CalendarTopView {
         setMeasuredDimension(widthMeasureSpec, MeasureSpec.makeMeasureSpec(calendarHeight, MeasureSpec.EXACTLY));
     }
 
+    private int prePosition=-1;
+
+    private int checkContantMonth(CalendarBean compare){
+        for(int i=0;i<cache.size();i++){
+            List<CalendarBean> data= cache.get(i).getData();
+           if(data.get(0).year==compare.year&&data.get(0).moth==compare.moth&&data.get(0).day==compare.day)
+            return i;
+        }
+        return -1;
+    }
+
     private void init() {
        final int[] dateArr= CalendarUtil.getYMD(new Date());
 
@@ -85,29 +99,61 @@ public class CalendarDateView extends ViewPager implements CalendarTopView {
 
             @Override
             public Object instantiateItem(ViewGroup container, final int position) {
-
                 CalendarView view;
-
-                if (!cache.isEmpty()) {
-                    view = cache.removeFirst();
-                } else {
+                boolean iscache=false;
+                List<CalendarBean> monthOfday=getMonthOfDayList(dateArr[0], dateArr[1] + position - Integer.MAX_VALUE / 2);
+                int index=checkContantMonth(monthOfday.get(0));
+                if(index==-1) {
                     view = new CalendarView(container.getContext(), row);
+                }else {
+                    view=  cache.removeFirst();
                 }
+                view.setOnItemClickListener(new CalendarView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(View view1, int postion1, CalendarBean bean) {
 
-                view.setOnItemClickListener(onItemClickListener);
+                        for(int i=0;i<cache.size();i++){
+                            cache.get(i).setData(getMonthOfDayList(dateArr[0],dateArr[1]+position-Integer.MAX_VALUE/2),false);
+                        }
+                             Iterator iterator = views.keySet().iterator();
+                           while (iterator.hasNext()){
+                             try {
+                                views.get(iterator.next()).resetSelection();
+                            }catch (Throwable t){
+                                t.printStackTrace();
+                            }
+                        }
+                        if(null!=onItemClickListener){
+                            onItemClickListener.onItemClick(view1,postion1,bean);
+                        }
+                        prePosition = position;
+                    }
+                });
                 view.setAdapter(mAdapter);
-
-                view.setData(getMonthOfDayList(dateArr[0],dateArr[1]+position-Integer.MAX_VALUE/2),position==Integer.MAX_VALUE/2);
+                boolean istoday = position==Integer.MAX_VALUE/2;
+                if(prePosition>=0){
+                    if(index<0) {
+                        view.setData(monthOfday, false);
+                    }else {
+                        view.selectChild();
+                    }
+                }else {
+                    view.setData(monthOfday,istoday);
+                }
+                if(istoday){
+                    prePosition = position;
+                }
                 container.addView(view);
                 views.put(position, view);
-
                 return view;
             }
 
             @Override
             public void destroyItem(ViewGroup container, int position, Object object) {
                 container.removeView((View) object);
-                cache.addLast((CalendarView) object);
+                if(!cache.contains(object)) {
+                    cache.addLast((CalendarView) object);
+                }
                 views.remove(position);
             }
         });
@@ -117,11 +163,15 @@ public class CalendarDateView extends ViewPager implements CalendarTopView {
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
 
-                if (onItemClickListener != null) {
-                    CalendarView view = views.get(position);
-                    Object[] obs = view.getSelect();
-                    onItemClickListener.onItemClick((View) obs[0], (int) obs[1], (CalendarBean) obs[2]);
-                }
+//                if (onItemClickListener != null) {
+//                    CalendarView view = views.get(position);
+//                    Object[] obs = view.getSelect();
+//                    if(null==obs){
+//
+//                    }else {
+//                        onItemClickListener.onItemClick((View) obs[0], (int) obs[1], (CalendarBean) obs[2]);
+//                    }
+//                }
 
                 mCaledarLayoutChangeListener.onLayoutChange(CalendarDateView.this);
             }
